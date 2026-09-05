@@ -74,6 +74,23 @@
   .rp-item .code{font-family:'JetBrains Mono',monospace;color:var(--moss);font-size:12px;}
   .rp-item ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;}
 
+  .nav-static{padding:10px 20px;font-size:13.5px;cursor:pointer;border-left:2px solid transparent;color:var(--ink);border-bottom:1px solid var(--rule);margin-bottom:6px;}
+  .nav-static:hover{background:var(--moss-soft);}
+  .nav-static.active{border-left-color:var(--moss);background:var(--moss-soft);font-weight:500;}
+
+  .essay-item{border:1px solid var(--rule);background:var(--panel);padding:18px 20px;margin-bottom:16px;}
+  .essay-item h3{font-size:17px;margin-bottom:6px;}
+  .essay-linked{font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .essay-linked span{font-family:'JetBrains Mono',monospace;background:var(--moss-soft);padding:1px 6px;margin-right:4px;display:inline-block;margin-bottom:4px;}
+  .essay-section{margin-top:12px;}
+  .essay-section h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;}
+  .essay-section p{font-size:13.5px;margin:0;}
+  .essay-toggle{font-size:12.5px;color:var(--moss);cursor:pointer;text-decoration:underline;text-underline-offset:2px;margin-top:10px;display:inline-block;}
+  .essay-detail{display:none;margin-top:6px;}
+  .essay-detail.open{display:block;}
+  .band-line{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--rule);}
+  .band-line:last-child{border-bottom:none;}
+
   .empty{color:var(--muted);padding:40px 0;font-size:14px;}
 </style>
 </head>
@@ -98,6 +115,8 @@ async function init(){
 function renderSidebar(){
   const sidebar = document.getElementById('sidebar');
   let html = `<div class="brand"><h1>AQA Bio Mastery</h1><p>A-level Biology (7402) — full specification</p></div>`;
+  html += `<div class="nav-static" data-view="essays">Essay questions (Paper 3)</div>`;
+  html += `<div class="nav-static" data-view="practicals">Required practicals (RP1–12)</div>`;
   ['Paper 1','Paper 2'].forEach(paper => {
     html += `<div class="paper-group"><div class="paper-label">${paper}</div>`;
     TOPICS.filter(t => t.paper === paper).forEach(t => {
@@ -115,23 +134,93 @@ function renderSidebar(){
   });
   sidebar.innerHTML = html;
 
+  sidebar.querySelectorAll('.nav-static').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.subtopic, .topic, .nav-static').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+      if (el.dataset.view === 'essays') loadEssays();
+      if (el.dataset.view === 'practicals') loadPracticals();
+    });
+  });
   sidebar.querySelectorAll('.topic').forEach(el => {
     el.addEventListener('click', () => {
       const list = document.getElementById(`sub-${el.dataset.topic}`);
       const open = list.style.display !== 'none';
       document.querySelectorAll('.subtopic-list').forEach(l => l.style.display = 'none');
-      document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.topic, .nav-static').forEach(t => t.classList.remove('active'));
       if (!open){ list.style.display = 'block'; el.classList.add('active'); }
     });
   });
   sidebar.querySelectorAll('.subtopic').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.querySelectorAll('.subtopic').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.subtopic, .nav-static').forEach(s => s.classList.remove('active'));
       el.classList.add('active');
       loadSubtopic(el.dataset.code);
     });
   });
+}
+
+async function loadEssays(){
+  const res = await fetch(`${API}/essays`);
+  const essays = await res.json();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="crumb">Paper 3</div>
+    <h2 class="subtopic-title">Essay questions</h2>
+    <p style="color:var(--muted);font-size:13.5px;margin-top:-12px;margin-bottom:22px;max-width:640px;">
+      In the real exam you choose <strong>one</strong> of two titles and write a single continuous-prose essay
+      (25 marks), marked against levels rather than additive points. Aim to draw on 4 or more distinct areas
+      of the specification, with real depth in at least one or two.
+    </p>
+    ${essays.map(e => `
+      <div class="essay-item" data-eid="${e.id}">
+        <h3>${e.title}</h3>
+        <div class="essay-linked">${e.topics_linked.map(t => `<span>${t}</span>`).join('')}</div>
+        <div class="essay-toggle" data-eid="${e.id}">Show planning guidance, indicative content &amp; mark bands</div>
+        <div class="essay-detail" id="essay-${e.id}">
+          <div class="essay-section"><h4>How to approach it</h4><p>${e.guidance}</p></div>
+          <div class="essay-section"><h4>Indicative content (spans multiple topics)</h4><p>${e.indicative_content}</p></div>
+          <div class="essay-section"><h4>Mark bands (levels, out of 25)</h4>
+            ${e.mark_bands.split(/(?=Level \d)/).map(b => `<div class="band-line">${b.trim()}</div>`).join('')}
+          </div>
+          <div class="essay-section"><h4>Common mistakes</h4>
+            <ul style="margin:4px 0 0;padding-left:18px;font-size:13.5px;">
+              ${e.common_mistakes.map(m => `<li>${m}</li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      </div>`).join('')}
+  `;
+  main.querySelectorAll('.essay-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(`essay-${btn.dataset.eid}`).classList.toggle('open');
+    });
+  });
+}
+
+async function loadPracticals(){
+  const res = await fetch(`${API}/practicals`);
+  const practicals = await res.json();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="crumb">Practical skills</div>
+    <h2 class="subtopic-title">Required practicals</h2>
+    ${practicals.map(p => `
+      <div class="rp-item">
+        <span class="code">${p.code}</span>
+        <h3>${p.title}</h3>
+        <p style="font-size:13.5px;margin:6px 0 0;">${p.description}</p>
+        <div style="margin-top:8px;">
+          <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px;">Key techniques</h4>
+          <ul>${p.key_techniques.map(t => `<li>${t}</li>`).join('')}</ul>
+        </div>
+        <div class="mistake-block" style="margin-top:10px;">
+          <b>Common mistakes:</b>
+          <ul style="margin:6px 0 0;padding-left:18px;">${p.common_mistakes.map(m => `<li>${m}</li>`).join('')}</ul>
+        </div>
+      </div>`).join('')}
+  `;
 }
 
 async function loadSubtopic(code){

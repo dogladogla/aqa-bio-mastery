@@ -124,6 +124,16 @@ app.get('/api/practicals', async (req, res) => {
   res.json(data);
 });
 
+// Paper 3 synoptic essay titles
+app.get('/api/essays', async (req, res) => {
+  const { data, error } = await supabase
+    .from('essays')
+    .select('*')
+    .order('sort_order');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
