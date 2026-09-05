@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AQA Bio Mastery — Specification Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2321;
+    --paper:#F6F4EE;
+    --panel:#FFFFFF;
+    --moss:#35543F;
+    --moss-soft:#E7EEE8;
+    --amber:#9C6B1E;
+    --amber-soft:#F3E7D2;
+    --rule:#DAD5C6;
+    --muted:#6B7168;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;line-height:1.5;}
+  h1,h2,h3{font-family:'Source Serif 4',serif;font-weight:600;margin:0;}
+  .app{display:grid;grid-template-columns:300px 1fr;min-height:100vh;}
+
+  /* Sidebar: spec tree */
+  .sidebar{border-right:1px solid var(--rule);padding:24px 0;overflow-y:auto;max-height:100vh;position:sticky;top:0;}
+  .brand{padding:0 20px 20px;border-bottom:1px solid var(--rule);margin-bottom:12px;}
+  .brand h1{font-size:19px;letter-spacing:-0.01em;}
+  .brand p{margin:4px 0 0;color:var(--muted);font-size:12.5px;}
+  .paper-group{margin-bottom:6px;}
+  .paper-label{padding:10px 20px 4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .topic{padding:8px 20px 8px 20px;cursor:pointer;border-left:2px solid transparent;}
+  .topic:hover{background:var(--moss-soft);}
+  .topic.active{border-left-color:var(--moss);background:var(--moss-soft);}
+  .topic .code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--moss);}
+  .topic .name{display:block;font-size:13.5px;margin-top:1px;}
+  .subtopic-list{padding-left:20px;}
+  .subtopic{padding:6px 20px 6px 8px;font-size:13px;cursor:pointer;color:var(--muted);border-left:2px solid transparent;}
+  .subtopic:hover{color:var(--ink);}
+  .subtopic.active{color:var(--ink);border-left-color:var(--amber);font-weight:500;}
+  .subtopic .scode{font-family:'JetBrains Mono',monospace;font-size:10.5px;margin-right:6px;}
+  .subtopic .badges{float:right;font-size:10px;color:var(--muted);}
+
+  /* Main content */
+  main{padding:36px 48px;max-width:820px;}
+  .crumb{color:var(--muted);font-size:12.5px;margin-bottom:6px;}
+  .subtopic-title{font-size:26px;margin-bottom:20px;}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--rule);margin-bottom:24px;}
+  .tab{padding:8px 4px;margin-right:26px;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--ink);border-bottom-color:var(--moss);font-weight:500;}
+
+  .kw{padding:14px 0;border-bottom:1px solid var(--rule);}
+  .kw:first-child{padding-top:0;}
+  .kw .term{font-family:'Source Serif 4',serif;font-weight:600;font-size:15.5px;}
+  .kw .def{margin-top:4px;}
+  .kw .mistake{margin-top:8px;font-size:13px;background:var(--amber-soft);border-left:3px solid var(--amber);padding:6px 10px;}
+  .kw .mistake b{color:var(--amber);}
+
+  .q-item{border:1px solid var(--rule);background:var(--panel);padding:16px 18px;margin-bottom:14px;}
+  .q-meta{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .q-meta .marks{font-family:'JetBrains Mono',monospace;}
+  .q-text{font-size:14.5px;margin-bottom:10px;}
+  .reveal-btn{font-size:12.5px;color:var(--moss);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  .answer-block{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule);display:none;}
+  .answer-block.open{display:block;}
+  .answer-block h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;}
+  .ms-point{font-size:13.5px;padding:3px 0;}
+  .ms-point .mk{font-family:'JetBrains Mono',monospace;color:var(--moss);margin-right:6px;}
+  .mistake-block{margin-top:10px;font-size:13px;background:var(--amber-soft);border-left:3px solid var(--amber);padding:8px 10px;}
+
+  .rp-item{padding:16px 0;border-bottom:1px solid var(--rule);}
+  .rp-item h3{font-size:15.5px;}
+  .rp-item .code{font-family:'JetBrains Mono',monospace;color:var(--moss);font-size:12px;}
+  .rp-item ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;}
+
+  .empty{color:var(--muted);padding:40px 0;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main id="main"><div class="empty">Select a topic on the left to begin.</div></main>
+</div>
+
+<script>
+const API = '/api';
+let TOPICS = [];
+let currentSubtopicCode = null;
+let currentTab = 'keywords';
+
+async function init(){
+  const res = await fetch(`${API}/topics`);
+  TOPICS = await res.json();
+  renderSidebar();
+}
+
+function renderSidebar(){
+  const sidebar = document.getElementById('sidebar');
+  let html = `<div class="brand"><h1>AQA Bio Mastery</h1><p>A-level Biology (7402) — full specification</p></div>`;
+  ['Paper 1','Paper 2'].forEach(paper => {
+    html += `<div class="paper-group"><div class="paper-label">${paper}</div>`;
+    TOPICS.filter(t => t.paper === paper).forEach(t => {
+      html += `<div class="topic" data-topic="${t.id}"><span class="code">${t.code}</span><span class="name">${t.name}</span></div>`;
+      html += `<div class="subtopic-list" id="sub-${t.id}" style="display:none;">`;
+      t.subtopics.forEach(s => {
+        html += `<div class="subtopic" data-code="${s.code}">
+          <span class="scode">${s.code}</span>${s.name}
+          <span class="badges">${s.keyword_count}kw · ${s.question_count}q</span>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  sidebar.innerHTML = html;
+
+  sidebar.querySelectorAll('.topic').forEach(el => {
+    el.addEventListener('click', () => {
+      const list = document.getElementById(`sub-${el.dataset.topic}`);
+      const open = list.style.display !== 'none';
+      document.querySelectorAll('.subtopic-list').forEach(l => l.style.display = 'none');
+      document.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+      if (!open){ list.style.display = 'block'; el.classList.add('active'); }
+    });
+  });
+  sidebar.querySelectorAll('.subtopic').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.subtopic').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      loadSubtopic(el.dataset.code);
+    });
+  });
+}
+
+async function loadSubtopic(code){
+  currentSubtopicCode = code;
+  currentTab = 'keywords';
+  const res = await fetch(`${API}/subtopics/${code}`);
+  const data = await res.json();
+  renderSubtopic(data);
+}
+
+function renderSubtopic(data){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="crumb">${data.topics.code} ${data.topics.name}</div>
+    <h2 class="subtopic-title">${data.code} — ${data.name}</h2>
+    <div class="tabs">
+      <div class="tab" data-tab="keywords">Key words (${data.keywords.length})</div>
+      <div class="tab" data-tab="questions">Exam questions (${data.questions.length})</div>
+    </div>
+    <div id="tab-content"></div>
+  `;
+  main.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => { currentTab = t.dataset.tab; renderTabs(data); });
+  });
+  renderTabs(data);
+}
+
+function renderTabs(data){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
+  const el = document.getElementById('tab-content');
+  if (currentTab === 'keywords'){
+    if (!data.keywords.length){ el.innerHTML = `<div class="empty">Key words for this subtopic haven't been added yet.</div>`; return; }
+    el.innerHTML = data.keywords.map(k => `
+      <div class="kw">
+        <div class="term">${k.term}</div>
+        <div class="def">${k.definition}</div>
+        ${k.common_mistake_note ? `<div class="mistake"><b>Common mistake:</b> ${k.common_mistake_note}</div>` : ''}
+      </div>`).join('');
+  } else {
+    if (!data.questions.length){ el.innerHTML = `<div class="empty">Exam questions for this subtopic haven't been added yet.</div>`; return; }
+    el.innerHTML = data.questions.map(q => `
+      <div class="q-item" data-qid="${q.id}">
+        <div class="q-meta">
+          <span>${q.command_word} · ${q.question_type} · ${q.difficulty}</span>
+          <span class="marks">[${q.marks} mark${q.marks>1?'s':''}]</span>
+        </div>
+        <div class="q-text">${q.question_text}</div>
+        <div class="reveal-btn" data-qid="${q.id}">Show model answer &amp; mark scheme</div>
+        <div class="answer-block" id="ans-${q.id}"></div>
+      </div>`).join('');
+    el.querySelectorAll('.reveal-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleAnswer(btn.dataset.qid));
+    });
+  }
+}
+
+async function toggleAnswer(qid){
+  const block = document.getElementById(`ans-${qid}`);
+  if (block.classList.contains('open')){ block.classList.remove('open'); return; }
+  if (!block.dataset.loaded){
+    const res = await fetch(`${API}/questions/${qid}`);
+    const q = await res.json();
+    block.innerHTML = `
+      <h4>Model answer</h4>
+      <div class="q-text">${q.model_answer || '<em>Not yet added.</em>'}</div>
+      <h4 style="margin-top:12px;">Mark scheme</h4>
+      ${q.mark_scheme.map(m => `<div class="ms-point"><span class="mk">[${m.marks_awarded}]</span>${m.point_text}</div>`).join('') || '<em>Not yet added.</em>'}
+      ${q.common_mistakes.length ? `<div class="mistake-block"><b>Common mistakes:</b><ul style="margin:6px 0 0;padding-left:18px;">${q.common_mistakes.map(m => `<li>${m.mistake_text}</li>`).join('')}</ul></div>` : ''}
+    `;
+    block.dataset.loaded = '1';
+  }
+  block.classList.add('open');
+}
+
+init();
+</script>
+</body>
+</html>
