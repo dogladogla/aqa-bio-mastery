@@ -66,6 +66,12 @@ app.get('/api/subtopics/:code', async (req, res) => {
     .single();
   if (subErr) return res.status(404).json({ error: 'Subtopic not found' });
 
+  const { data: keyConcepts } = await supabase
+    .from('key_concepts')
+    .select('*')
+    .eq('subtopic_id', subtopic.id)
+    .order('sort_order');
+
   const { data: keywords } = await supabase
     .from('keywords')
     .select('*')
@@ -78,7 +84,7 @@ app.get('/api/subtopics/:code', async (req, res) => {
     .eq('subtopic_id', subtopic.id)
     .order('sort_order');
 
-  res.json({ ...subtopic, keywords: keywords || [], questions: questions || [] });
+  res.json({ ...subtopic, key_concepts: keyConcepts || [], keywords: keywords || [], questions: questions || [] });
 });
 
 // Full question detail: model answer, mark scheme points, common mistakes
