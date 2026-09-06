@@ -57,6 +57,11 @@
   .kw .mistake{margin-top:8px;font-size:13px;background:var(--amber-soft);border-left:3px solid var(--amber);padding:6px 10px;}
   .kw .mistake b{color:var(--amber);}
 
+  .explanation{font-size:14.5px;line-height:1.75;white-space:pre-line;}
+  .explanation .hl{background:var(--moss-soft);color:var(--moss);font-weight:600;padding:0 3px;border-radius:2px;}
+  .diagram-box{margin-top:22px;padding:16px;border:1px solid var(--rule);background:var(--panel);}
+  .diagram-box svg{width:100%;height:auto;display:block;}
+
   .concept{padding:16px 0;border-bottom:1px solid var(--rule);}
   .concept:first-child{padding-top:0;}
   .concept .cname{font-family:'Source Serif 4',serif;font-weight:600;font-size:16px;color:var(--moss);}
@@ -65,7 +70,7 @@
   .q-item{border:1px solid var(--rule);background:var(--panel);padding:16px 18px;margin-bottom:14px;}
   .q-meta{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:8px;}
   .q-meta .marks{font-family:'JetBrains Mono',monospace;}
-  .q-text{font-size:14.5px;margin-bottom:10px;}
+  .q-text{font-size:14.5px;margin-bottom:10px;white-space:pre-line;}
   .reveal-btn{font-size:12.5px;color:var(--moss);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
   .answer-block{margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule);display:none;}
   .answer-block.open{display:block;}
@@ -233,7 +238,7 @@ async function loadPracticals(){
 
 async function loadSubtopic(code){
   currentSubtopicCode = code;
-  currentTab = 'concepts';
+  currentTab = 'explanation';
   const res = await fetch(`${API}/subtopics/${code}`);
   const data = await res.json();
   renderSubtopic(data);
@@ -245,6 +250,7 @@ function renderSubtopic(data){
     <div class="crumb">${data.topics.code} ${data.topics.name}</div>
     <h2 class="subtopic-title">${data.code} — ${data.name}</h2>
     <div class="tabs">
+      <div class="tab" data-tab="explanation">Explanation</div>
       <div class="tab" data-tab="concepts">Key concepts (${data.key_concepts.length})</div>
       <div class="tab" data-tab="keywords">Key words (${data.keywords.length})</div>
       <div class="tab" data-tab="questions">Exam questions (${data.questions.length})</div>
@@ -260,7 +266,11 @@ function renderSubtopic(data){
 function renderTabs(data){
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === currentTab));
   const el = document.getElementById('tab-content');
-  if (currentTab === 'concepts'){
+  if (currentTab === 'explanation'){
+    if (!data.detailed_explanation){ el.innerHTML = `<div class="empty">A detailed explanation for this subtopic hasn't been added yet.</div>`; return; }
+    el.innerHTML = `<div class="explanation">${data.detailed_explanation}</div>` +
+      (data.diagram_svg ? `<div class="diagram-box">${data.diagram_svg}</div>` : '');
+  } else if (currentTab === 'concepts'){
     if (!data.key_concepts.length){ el.innerHTML = `<div class="empty">Key concepts for this subtopic haven't been added yet.</div>`; return; }
     el.innerHTML = data.key_concepts.map(c => `
       <div class="concept">
